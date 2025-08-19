@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goblin Timer</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Fugaz+One&family=Roboto+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #111;
+            color: white;
+            font-family: 'Roboto Mono', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #timer-container {
+            text-align: center;
+            max-width: 90%;
+        }
+
+        #goblin-text {
+            font-family: 'Fugaz One', cursive;
+            color: #32CD32; /* Limettengrün */
+            font-size: 2em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+        }
+
+        #countdown-timer {
+            font-size: 3em;
+            color: white;
+            text-shadow: 2px 2px 4px black;
+            background-color: #333;
+            border-radius: 10px;
+            padding: 10px 20px;
+            display: inline-block;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+            transition: transform 0.6s ease-in-out;
+        }
+
+        /* Das CSS für das weiße Quadrat */
+        #white-square {
+            width: 200px;
+            height: 200px;
+            background-color: white;
+            margin-top: 20px;
+        }
+        
+        #media-display img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="timer-container">
+        <h2 id="goblin-text">The Goblin will dance for:</h2>
+        <p id="countdown-timer">00:00:00</p>
+        <div id="media-display">
+            </div>
+    </div>
+
+    <audio id="background-music" loop>
+        <source src="URL_ZUR_MUSIKDATEI.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const API_URL = 'DEINE_API_ENDPUNKT_URL';
+        const activeTimerGif = 'URL_ZUM_GIF_FUER_AKTIVEN_TIMER.gif';
+
+        const countdownElement = document.getElementById('countdown-timer');
+        const mediaDisplay = document.getElementById('media-display');
+        const backgroundMusic = document.getElementById('background-music');
+
+        let remainingSeconds = 0;
+        let updateInterval;
+
+        function formatTime(totalSeconds) {
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            
+            const pad = num => num.toString().padStart(2, '0');
+            
+            return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        }
+
+        function updateTimer() {
+            fetch(API_URL)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Netzwerk-Antwort war nicht ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const newRemainingMinutes = data.remainingMinutes;
+                    const newRemainingSeconds = newRemainingMinutes * 60;
+
+                    if (newRemainingSeconds !== remainingSeconds) {
+                        remainingSeconds = newRemainingSeconds;
+                        countdownElement.textContent = formatTime(remainingSeconds);
+                        
+                        if (!updateInterval) {
+                            startCountdown();
+                        }
+                    }
+
+                    if (newRemainingMinutes > 0) {
+                        mediaDisplay.innerHTML = `<img src="${activeTimerGif}" alt="Timer ist aktiv">`;
+                        backgroundMusic.play();
+                    } else {
+                        mediaDisplay.innerHTML = `<div id="white-square"></div>`;
+                        backgroundMusic.pause();
+                        backgroundMusic.currentTime = 0;
+                    }
+                })
+                .catch(error => {
+                    console.error('Fehler beim Abrufen des Timer-Werts:', error);
+                    countdownElement.textContent = 'Fehler!';
+                    mediaDisplay.innerHTML = '';
+                    backgroundMusic.pause();
+                });
+        }
+
+        function startCountdown() {
+            updateInterval = setInterval(() => {
+                if (remainingSeconds > 0) {
+                    remainingSeconds--;
+                    countdownElement.textContent = formatTime(remainingSeconds);
+                } else {
+                    clearInterval(updateInterval);
+                    updateInterval = null;
+                    countdownElement.textContent = "00:00:00";
+                }
+            }, 1000);
+        }
+        
+        // Startet den Timer und aktualisiert die Daten alle 10 Sekunden
+        updateTimer(); 
+        setInterval(updateTimer, 10000); 
+    </script>
+
+</body>
+</html>
