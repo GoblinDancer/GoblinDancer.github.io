@@ -7,32 +7,62 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Fugaz+One&family=Roboto+Mono&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
     <style>
+        @font-face {
+            font-family: 'Miskan';
+            src: url('https://www.dafont.com/de/miskan.font');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         body {
             background-color: #111;
             color: white;
-            font-family: 'Roboto Mono', monospace;
+            font-family: 'Miskan', 'Roboto Mono', monospace;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             min-height: 100vh;
             margin: 0;
             padding: 20px;
             box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Hintergrund-Wellen-Animation */
+        .wave {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(50, 205, 50, 0.1) 0%, rgba(17, 17, 17, 0) 70%);
+            animation: wave-animation 15s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes wave-animation {
+            0% { transform: scale(1, 1) translateY(0); }
+            50% { transform: scale(1.1, 1.2) translateY(-10px); }
+            100% { transform: scale(1, 1) translateY(0); }
+        }
+
+        #top-content {
+            width: 100%;
+            text-align: center;
+            margin-top: 50px;
         }
 
         #timer-container {
             text-align: center;
-            max-width: 90%;
         }
 
         #goblin-text {
-            font-family: 'Fugaz One', cursive;
-            color: #32CD32; /* Limettengrün */
             font-size: 2em;
+            color: #32CD32;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
             margin-bottom: 20px;
         }
@@ -46,44 +76,138 @@
             padding: 10px 20px;
             display: inline-block;
             box-shadow: 0 4px 6px rgba(0,0,0,0.4);
-            transition: transform 0.6s ease-in-out;
-        }
-
-        /* Das CSS für das weiße Quadrat */
-        #white-square {
-            width: 200px;
-            height: 200px;
-            background-color: white;
-            margin-top: 20px;
         }
         
-        #media-display img {
-            max-width: 100%;
-            height: auto;
+        #media-display-container {
+            position: relative;
             margin-top: 20px;
+            border: 5px solid #333;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+            width: 250px; /* Beispielgröße */
+            height: 250px; /* Beispielgröße */
+        }
+
+        #media-display img, #media-display div {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #media-display .inactive {
+            opacity: 1;
+            z-index: 2;
+        }
+
+        #media-display .active {
+            opacity: 1;
+            z-index: 3;
+        }
+
+        /* PayPal-Spendenlink-Bereich */
+        #paypal-container {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #32CD32;
+        }
+        
+        #paypal-text {
+            font-family: 'Miskan', 'Roboto Mono', monospace;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+            white-space: nowrap;
+        }
+
+        #paypal-container img {
+            width: 150px;
+            height: 150px;
+            border: 3px solid #333;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        #paypal-container .donation-amount {
+            font-size: 1em;
+            color: white;
+            margin-top: 5px;
+        }
+
+        .arrow {
+            color: #32CD32;
+            font-size: 3em;
+            position: absolute;
+            left: -50px;
+            top: 50px;
+            animation: bounce-arrow 1s infinite;
+        }
+
+        @keyframes bounce-arrow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Media-Queries für kleinere Bildschirme */
+        @media (max-width: 768px) {
+            #paypal-container {
+                position: static;
+                transform: none;
+                margin-top: 30px;
+                order: 3;
+            }
+            .arrow {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="wave"></div>
 
-    <div id="timer-container">
-        <h2 id="goblin-text">The Goblin will dance for:</h2>
-        <p id="countdown-timer">00:00:00</p>
-        <div id="media-display">
+    <div id="top-content">
+        <div id="timer-container">
+            <h2 id="goblin-text">The Goblin will dance for:</h2>
+            <p id="countdown-timer">00:00:00</p>
+        </div>
+        
+        <div id="media-display-container">
+            <div id="media-display">
+                <img id="inactive-goblin" src="URL_NICHT_TANZENDER_GOBLIN.png" alt="Nicht tanzender Goblin" class="inactive">
+                <img id="active-goblin" src="URL_TANZENDER_GOBLIN.gif" alt="Tanzender Goblin" class="active" style="opacity:0;">
             </div>
+        </div>
+    </div>
+    
+    <div id="paypal-container">
+        <span class="arrow">⤻</span>
+        <h2 id="paypal-text">Send money to let him dance!</h2>
+        <img src="URL_PAYPAL_QR_CODE.png" alt="PayPal QR Code">
+        <p class="donation-amount">1€ = 1h</p>
     </div>
 
     <audio id="background-music" loop>
-        <source src="URL_ZUR_MUSIKDATEI.mp3" type="audio/mpeg">
+        <source src="URL_HINTERGRUNDMUSIK.mp3" type="audio/mpeg">
     </audio>
 
     <script>
-        const API_URL = 'https://fcc1t9cb2d.execute-api.eu-north-1.amazonaws.com/default/GetTimerValue';
-        const activeTimerGif = 'URL_ZUM_GIF_FUER_AKTIVEN_TIMER.gif';
-
+        const API_URL = 'DEINE_API_ENDPUNKT_URL';
+        
         const countdownElement = document.getElementById('countdown-timer');
-        const mediaDisplay = document.getElementById('media-display');
+        const inactiveGoblin = document.getElementById('inactive-goblin');
+        const activeGoblin = document.getElementById('active-goblin');
         const backgroundMusic = document.getElementById('background-music');
+        const musicButton = document.getElementById('music-button');
 
         let remainingSeconds = 0;
         let updateInterval;
@@ -120,10 +244,12 @@
                     }
 
                     if (newRemainingMinutes > 0) {
-                        mediaDisplay.innerHTML = `<img src="${activeTimerGif}" alt="Timer ist aktiv">`;
+                        inactiveGoblin.style.opacity = 0;
+                        activeGoblin.style.opacity = 1;
                         backgroundMusic.play();
                     } else {
-                        mediaDisplay.innerHTML = `<div id="white-square"></div>`;
+                        inactiveGoblin.style.opacity = 1;
+                        activeGoblin.style.opacity = 0;
                         backgroundMusic.pause();
                         backgroundMusic.currentTime = 0;
                     }
@@ -131,7 +257,8 @@
                 .catch(error => {
                     console.error('Fehler beim Abrufen des Timer-Werts:', error);
                     countdownElement.textContent = 'Fehler!';
-                    mediaDisplay.innerHTML = '';
+                    inactiveGoblin.style.opacity = 1;
+                    activeGoblin.style.opacity = 0;
                     backgroundMusic.pause();
                 });
         }
@@ -149,7 +276,6 @@
             }, 1000);
         }
         
-        // Startet den Timer und aktualisiert die Daten alle 10 Sekunden
         updateTimer(); 
         setInterval(updateTimer, 10000); 
     </script>
