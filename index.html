@@ -1,10 +1,16 @@
+<script>
 const API_GET = 'https://fcc1t9cb2d.execute-api.eu-north-1.amazonaws.com/default/GetTimerValue';
 const API_UPDATE = 'https://tgkm2ga3g9.execute-api.eu-north-1.amazonaws.com/default/UpdateTimer';
 
 const countdownElement = document.getElementById('countdown-timer');
-let remainingSeconds = 0;
-let updateInterval;
+const inactiveGoblin = document.getElementById('inactive-goblin');
+const activeGoblin = document.getElementById('active-goblin');
+const backgroundMusic = document.getElementById('background-music');
 
+let remainingSeconds = 0;
+let updateInterval = null;
+
+// Zeit formatieren (HH:MM:SS)
 function formatTime(totalSeconds) {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -13,52 +19,59 @@ function formatTime(totalSeconds) {
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
+// Countdown starten
 function startCountdown() {
-    if (updateInterval) clearInterval(updateInterval);
+    if (updateInterval) return; // nur einmal starten
     updateInterval = setInterval(() => {
         if (remainingSeconds > 0) {
             remainingSeconds--;
             countdownElement.textContent = formatTime(remainingSeconds);
         } else {
             countdownElement.textContent = "00:00:00";
+            inactiveGoblin.style.opacity = 1;
+            activeGoblin.style.opacity = 0;
+            backgroundMusic.pause();
+            backgroundMusic.currentTime = 0;
+            clearInterval(updateInterval);
+            updateInterval = null;
         }
     }, 1000);
 }
 
+// Timer von Lambda abrufen
 function updateTimer() {
     fetch(API_GET)
-        .then(res => res.json())
+        .then(response => response.json())
         .then(data => {
-            remainingSeconds = data.remainingSeconds;
-            countdownElement.textContent = formatTime(remainingSeconds);
+            const now = Math.floor(Date.now() / 1000);
+            const endTimestamp = data.endTimestamp || now;
+            const newRemaining = Math.max(0, endTimestamp - now);
+
+            if (newRemaining !== remainingSeconds) {
+                remainingSeconds = newRemaining;
+                countdownElement.textContent = formatTime(remainingSeconds);
+            }
+
+            if (remainingSeconds > 0) {
+                inactiveGoblin.style.opacity = 0;
+                activeGoblin.style.opacity = 1;
+                backgroundMusic.play().catch(() => {}); // Fehler abfangen, falls Autoplay blockiert
+            } else {
+                inactiveGoblin.style.opacity = 1;
+                activeGoblin.style.opacity = 0;
+                backgroundMusic.pause();
+                backgroundMusic.currentTime = 0;
+            }
+
             startCountdown();
         })
-        .catch(err => console.error("Fehler beim Abrufen des Timer-Werts:", err));
+        .catch(error => {
+            console.error('Fehler beim Abrufen des Timer-Werts:', error);
+            countdownElement.textContent = 'Fehler!';
+        });
 }
 
-// --- PayPal Button ---
-paypal.Buttons({
-    createOrder: (data, actions) => {
-        return actions.order.create({
-            purchase_units: [{ amount: { value: '1.00' } }] // 1€ = 1h
-        });
-    },
-    onApprove: (data, actions) => {
-        return actions.order.capture().then(details => {
-            fetch(API_UPDATE, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ transaction_id: data.orderID })
-            })
-            .then(res => res.json())
-            .then(r => {
-                console.log("Lambda Antwort:", r);
-                updateTimer(); // sofort neuen Wert holen
-            })
-            .catch(err => console.error("Fehler bei Lambda:", err));
-        });
-    }
-}).render('#paypal-button-container');
-
-// --- Beim Laden Timer holen ---
+// --- Timer initial abrufen ---
 updateTimer();
+setInterval(updateTimer, 30000); // alle 30 Sekunden neuen Endwert holen
+</script>
