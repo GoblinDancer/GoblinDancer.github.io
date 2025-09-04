@@ -1,280 +1,98 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Goblin Timer</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+<script>
+const API_GET = 'https://fcc1t9cb2d.execute-api.eu-north-1.amazonaws.com/default/GetTimerValue';
+const API_UPDATE = 'https://tgkm2ga3g9.execute-api.eu-north-1.amazonaws.com/default/UpdateTimer';
 
-    <style>
-       @font-face {
-            font-family: 'Miskan';
-            src: url('./fonts/MiskanOblique.ttf') format('truetype');
-            font-weight: normal;
-            font-style: normal;
-       }
+const countdownElement = document.getElementById('countdown-timer');
+const inactiveGoblin = document.getElementById('inactive-goblin');
+const activeGoblin = document.getElementById('active-goblin');
+const backgroundMusic = document.getElementById('background-music');
 
-        body {
-            background-color: #111;
-            color: white;
-            font-family: 'Miskan', 'Roboto Mono', monospace;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-            position: relative;
-            overflow: hidden;
-        }
+let remainingSeconds = 0;
+let countdownStarted = false;
 
-        .wave {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(ellipse at center, rgba(50, 205, 50, 0.1) 0%, rgba(17, 17, 17, 0) 70%);
-            animation: wave-animation 15s ease-in-out infinite;
-            z-index: -1;
-        }
+// Formatierung: HH:MM:SS
+function formatTime(totalSeconds) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const pad = num => num.toString().padStart(2, '0');
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+}
 
-        @keyframes wave-animation {
-            0% { transform: scale(1, 1) translateY(0); }
-            50% { transform: scale(1.1, 1.2) translateY(-10px); }
-            100% { transform: scale(1, 1) translateY(0); }
-        }
+// Timer vom Server holen und lokal updaten
+function updateTimerFromServer() {
+    fetch(API_GET)
+        .then(res => res.json())
+        .then(data => {
+            const endTimestamp = data.endTimestamp || 0;
+            const now = Math.floor(Date.now() / 1000);
+            remainingSeconds = Math.max(0, endTimestamp - now);
 
-        #top-content {
-            width: 100%;
-            text-align: center;
-            margin-top: 50px;
-        }
+            countdownElement.textContent = formatTime(remainingSeconds);
 
-        #timer-container {
-            text-align: center;
-        }
-
-        #goblin-text {
-            font-size: 2em;
-            color: #32CD32;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            margin-bottom: 20px;
-        }
-
-        #countdown-timer {
-            font-size: 3em;
-            color: white;
-            text-shadow: 2px 2px 4px black;
-            background-color: #333;
-            border-radius: 10px;
-            padding: 10px 20px;
-            display: inline-block;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
-        }
-        
-        #media-display-container {
-            position: relative;
-            margin-top: 20px;
-            border: 5px solid #333;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
-            width: 250px;
-            height: 250px;
-        }
-
-        #media-display img {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: opacity 0.5s ease-in-out;
-        }
-
-        #paypal-container {
-            position: absolute;
-            top: 50%;
-            right: 20px;
-            transform: translateY(-50%);
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: #32CD32;
-        }
-        
-        #paypal-text {
-            font-size: 1.2em;
-            margin-bottom: 5px;
-            white-space: nowrap;
-        }
-
-        #paypal-container .donation-amount {
-            font-size: 1em;
-            color: white;
-            margin-top: 5px;
-        }
-
-        .arrow {
-            color: #32CD32;
-            font-size: 3em;
-            position: absolute;
-            left: -50px;
-            top: 50px;
-            animation: bounce-arrow 1s infinite;
-        }
-
-        @keyframes bounce-arrow {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        @media (max-width: 768px) {
-            #paypal-container {
-                position: static;
-                transform: none;
-                margin-top: 30px;
-                order: 3;
-            }
-            .arrow {
-                display: none;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="wave"></div>
-
-    <div id="top-content">
-        <div id="timer-container">
-            <h2 id="goblin-text">The Goblin will dance for:</h2>
-            <p id="countdown-timer">00:00:00</p>
-        </div>
-        
-        <div id="media-display-container">
-            <div id="media-display">
-                <img id="inactive-goblin" src="URL_NICHT_TANZENDER_GOBLIN.png" alt="Nicht tanzender Goblin" class="inactive">
-                <img id="active-goblin" src="URL_TANZENDER_GOBLIN.gif" alt="Tanzender Goblin" class="active" style="opacity:0;">
-            </div>
-        </div>
-    </div>
-    
-    <div id="paypal-container">
-        <span class="arrow">⤻</span>
-        <h2 id="paypal-text">Send money to let him dance!</h2>
-        <div id="paypal-button-container"></div>
-        <p class="donation-amount">1€ = 1h</p>
-    </div>
-
-    <audio id="background-music" loop>
-        <source src="URL_HINTERGRUNDMUSIK.mp3" type="audio/mpeg">
-    </audio>
-
-    <!-- PayPal SDK -->
-    <script src="https://www.paypal.com/sdk/js?client-id=Adm2KDNDQAHj4lWigfpRh3TpaCaA9i_UCFvgW2esM8HiTMSfe54q3hxMhUf5ngbSdMjNQvJT8GExWrUw&currency=EUR"></script>
-
-    <script>
-    const API_GET = 'https://fcc1t9cb2d.execute-api.eu-north-1.amazonaws.com/default/GetTimerValue';
-    const API_UPDATE = 'https://tgkm2ga3g9.execute-api.eu-north-1.amazonaws.com/default/UpdateTimer';
-
-    const countdownElement = document.getElementById('countdown-timer');
-    const inactiveGoblin = document.getElementById('inactive-goblin');
-    const activeGoblin = document.getElementById('active-goblin');
-    const backgroundMusic = document.getElementById('background-music');
-
-    let remainingSeconds = 0;
-    let updateInterval = null;
-
-    function formatTime(totalSeconds) {
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        const pad = num => num.toString().padStart(2, '0');
-        return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-    }
-
-    function updateTimerFromServer() {
-        fetch(API_GET)
-            .then(response => response.json())
-            .then(data => {
-                // Endzeit vom Server auslesen
-                const endTimestamp = data.endTimestamp || 0;
-                const now = Math.floor(Date.now() / 1000);
-                remainingSeconds = Math.max(0, endTimestamp - now);
-
-                countdownElement.textContent = formatTime(remainingSeconds);
-
-                // Goblin Animation & Musik
-                if (remainingSeconds > 0) {
-                    inactiveGoblin.style.opacity = 0;
-                    activeGoblin.style.opacity = 1;
-                    try { backgroundMusic.play(); } catch(e) {}
-                } else {
-                    inactiveGoblin.style.opacity = 1;
-                    activeGoblin.style.opacity = 0;
-                    backgroundMusic.pause();
-                    backgroundMusic.currentTime = 0;
-                }
-
-                // Countdown starten, falls noch nicht
-                if (!updateInterval) {
-                    startCountdown();
-                }
-            })
-            .catch(err => {
-                console.error("Fehler beim Abrufen des Timer-Werts:", err);
-                countdownElement.textContent = 'Fehler!';
-            });
-    }
-
-    function startCountdown() {
-        updateInterval = setInterval(() => {
+            // Goblin Animation & Musik
             if (remainingSeconds > 0) {
-                remainingSeconds--;
-                countdownElement.textContent = formatTime(remainingSeconds);
+                inactiveGoblin.style.opacity = 0;
+                activeGoblin.style.opacity = 1;
+                try { backgroundMusic.play(); } catch(e){ /* Autoplay blockiert */ }
             } else {
-                countdownElement.textContent = "00:00:00";
+                inactiveGoblin.style.opacity = 1;
+                activeGoblin.style.opacity = 0;
+                backgroundMusic.pause();
+                backgroundMusic.currentTime = 0;
             }
-        }, 1000);
-    }
 
-    // --- Timer initial holen + alle 30 Sekunden vom Server aktualisieren ---
-    updateTimerFromServer();
-    setInterval(updateTimerFromServer, 30000);
+            // Countdown starten, falls noch nicht gestartet
+            if (!countdownStarted) {
+                startCountdown();
+                countdownStarted = true;
+            }
+        })
+        .catch(err => {
+            console.error("Fehler beim Abrufen des Timer-Werts:", err);
+            countdownElement.textContent = 'Fehler!';
+        });
+}
 
-    // --- PayPal Button ---
-    paypal.Buttons({
-        createOrder: function(data, actions) {
-            return actions.order.create({
-                purchase_units: [{
-                    amount: { value: '1.00' } // 1 EUR = 1h
-                }]
-            });
-        },
-        onApprove: function(data, actions) {
-            return actions.order.capture().then(function(details) {
-                console.log('Zahlung erfolgreich:', details);
-                // Order-ID an Lambda senden
-                fetch(API_UPDATE, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ transaction_id: data.orderID })
-                })
-                .then(res => res.json())
-                .then(r => {
-                    console.log("Lambda Antwort:", r);
-                    updateTimerFromServer(); // sofort neuen Wert holen
-                })
-                .catch(err => console.error("Fehler bei Lambda:", err));
-            });
+// Countdown Sekunde für Sekunde
+function startCountdown() {
+    setInterval(() => {
+        if (remainingSeconds > 0) {
+            remainingSeconds--;
+            countdownElement.textContent = formatTime(remainingSeconds);
+        } else {
+            countdownElement.textContent = "00:00:00";
         }
-    }).render('#paypal-button-container');
+    }, 1000);
+}
+
+// Timer initial holen + alle 30 Sekunden aktualisieren
+updateTimerFromServer();
+setInterval(updateTimerFromServer, 30000);
+
+// PayPal Button
+paypal.Buttons({
+    createOrder: (data, actions) => {
+        return actions.order.create({
+            purchase_units: [{ amount: { value: '1.00' } }] // 1€ = 1h
+        });
+    },
+    onApprove: (data, actions) => {
+        return actions.order.capture().then(details => {
+            console.log('Zahlung erfolgreich:', details);
+            // Order-ID an Lambda senden
+            fetch(API_UPDATE, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ transaction_id: data.orderID })
+            })
+            .then(res => res.json())
+            .then(r => {
+                console.log("Lambda Antwort:", r);
+                updateTimerFromServer(); // sofort neuen Wert holen
+            })
+            .catch(err => console.error("Fehler bei Lambda:", err));
+        });
+    }
+}).render('#paypal-button-container');
 </script>
